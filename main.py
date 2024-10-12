@@ -1,11 +1,16 @@
 def save_render(format='jpeg'):
-  filename = str(zoom) + '_' + str(x_count) + 'x' + str(y_count) + '_render'
+  filename = get_name()
   pg.image.save(sc, 'renders/' +filename+'.'+format)
+def get_name():
+  filename = str(zoom) + '_' + str(x_count) + 'x' + str(y_count) + '_render'
+  return filename
   
-def select_extension(format=1):
-  if format == '' or save_format == '1': return 'jpeg'
+def select_extension(format='1'):
+  if format == '1': return 'jpeg'
   if format == '2': return 'png'
-  if format == '3': return 'bmp' 
+  if format == '3': return 'bmp'
+
+  if format == '':  return 'jpeg'
 
 import sys
 import pygame as pg
@@ -17,13 +22,22 @@ clock = pg.time.Clock()
 
 # Define values
 
+# Fractal values
 size = 100              # Pixel distance beten dots. Shouldnt be changed
 count = 2               # Amount of dots for each direction
 x_count, y_count = 0, 0 # Amount of dots for each row/column
 zoom = 1                # Zoom
-rendering = True        # Are we saving the render?
-save_format = 'bmp'     # Which format are we using to save the render? (png/jpeg)
 positions = []          # List of dots position
+
+# Rendering values
+save_format = 'jpeg'       # Which format are we using to save the render? (png/jpeg/bmp)
+bg_color = (255, 255, 255) # Color of the background
+
+# Booleans
+rendering = True  # Are we saving the render?
+oversized = False # Is the image way too big to be drew in window?
+window = True     # Generate pygame window or no?
+
 
 # Are you inserting values through console or through code?
 use_console = 1
@@ -45,7 +59,7 @@ if use_console:
   save_format = select_extension(save_format)
   
   # We are not making grids with only one dot
-  if count   < 2 and count != 0: count = 2
+  if count   < 2 and  count != 0: count = 2
   if x_count < 2 and square != 1: x_count = 2
   if y_count < 2 and square != 1: y_count = 2
 
@@ -61,13 +75,27 @@ for x in range(x_count):
 width =  size*(x_count)/zoom-size/zoom+1
 height = size*(y_count)/zoom-size/zoom+1
 
-print('Figure size: ' + str(width-1) + 'x' + str(height-1))
-if rendering: print('\nRender will be done once you close the program.')
-sc = pg.display.set_mode((width, height))
- 
+print('[Info] Figure size: ' + str(width-1) + 'x' + str(height-1))
+print('[Info] Filename: '+get_name()+'.'+save_format)
+if rendering: print('\n[Progress] Rendering process has been started...')
+
+# Check if PC is able to render given figure
+try:
+  sc = pg.Surface((round(width),round(height)))
+except:
+  print('[FATAL] Out of memory!')
+  sys.exit()
+  
+if width > 5000 and height > 5000:
+  print('[WARNING]  Image size is too large, it wont be drew in the pygame window')
+  display = pg.display.set_mode((100, 100))
+  oversized = True
+else:
+  display = pg.display.set_mode((width, height))
+
 # Program loop
 while True:
-  sc.fill((255, 255, 255))
+  sc.fill(bg_color)
   
   # Render the lines
   for x in range(len(positions)):
@@ -75,13 +103,21 @@ while True:
       pg.draw.line(sc, (0,0,0), positions[x], positions[y])
 
   if rendering:
-    save_render(save_format)
-    rendering = False
+    print('[Progress] Lines have been rendered')
 
+    save_render(save_format)
+    
+    print('[Progress] Render is done')
+    rendering = False
+  
+  
   for event in pg.event.get():
     if event.type == pg.QUIT:
       pg.quit()
       sys.exit()
-
+  
+  if oversized == False:
+    display.blit(sc, (0,0))
   pg.display.flip()
+
   clock.tick(fps)
